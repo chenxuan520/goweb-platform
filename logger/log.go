@@ -11,13 +11,43 @@ import (
 	"os"
 )
 
+type Log struct {
+	Level         string `mapstructure:"level" json:"level" yaml:"level" ini:"level"`                                    // 级别
+	Format        string `mapstructure:"format" json:"format" yaml:"format" ini:"level"`                                 // 输出
+	Prefix        string `mapstructure:"prefix" json:"prefix" yaml:"prefix" ini:"level"`                                 // 日志前缀
+	Director      string `mapstructure:"director" json:"director"  yaml:"director" ini:"level"`                          // 日志文件夹
+	ShowLine      bool   `mapstructure:"show-line" json:"showLine" yaml:"showLine" ini:"showLine"`                       // 显示行
+	EncodeLevel   string `mapstructure:"encode-level" json:"encodeLevel" yaml:"encode-level" ini:"encode-level"`         // 编码级
+	StacktraceKey string `mapstructure:"stacktrace-key" json:"stacktraceKey" yaml:"stacktrace-key" ini:"stacktrace-key"` // 栈名
+	LogInConsole  bool   `mapstructure:"log-in-console" json:"logInConsole" yaml:"log-in-console" ini:"log-in-console"`  // 输出控制台
+}
+
 //日志封装
 var _defaultLogger *zap.Logger
 
-func Init(level string, format, prefix, director string, showLine bool, encodeLevel string, stacktraceKey string, logInConsole bool) (logger *zap.Logger) {
-	if ok := utils.Exists(fmt.Sprintf("%s", director)); !ok { // 判断是否有Director文件夹
-		fmt.Printf("create %v directory\n", director)
-		_ = os.Mkdir(fmt.Sprintf("%s", director), os.ModePerm)
+//default zap config
+var _defaultConfig *Log
+
+func init() {
+	_defaultConfig = &Log{
+		Level:         "warn",
+		Format:        "console",
+		Prefix:        "[Log]",
+		Director:      "logs",
+		ShowLine:      false,
+		EncodeLevel:   "LowercaseLevelEncoder",
+		StacktraceKey: "stacktrace",
+		LogInConsole:  true,
+	}
+}
+
+func Init(config *Log) (logger *zap.Logger) {
+	if config == nil {
+		config = _defaultConfig
+	}
+	if ok := utils.Exists(fmt.Sprintf("%s", config.Director)); !ok { // 判断是否有Director文件夹
+		fmt.Printf("create %v directory\n", config.Director)
+		_ = os.Mkdir(fmt.Sprintf("%s", config.Director), os.ModePerm)
 	}
 	debugPriority := zap.LevelEnablerFunc(func(lev zapcore.Level) bool {
 		return lev == zap.DebugLevel
@@ -32,25 +62,25 @@ func Init(level string, format, prefix, director string, showLine bool, encodeLe
 		return lev >= zap.ErrorLevel
 	})
 	cores := make([]zapcore.Core, 0)
-	switch level {
+	switch config.Level {
 	case "info":
-		cores = append(cores, getEncoderCore(logInConsole, prefix, format, encodeLevel, stacktraceKey, fmt.Sprintf("%s/server_info.log", director), infoPriority))
-		cores = append(cores, getEncoderCore(logInConsole, prefix, format, encodeLevel, stacktraceKey, fmt.Sprintf("%s/server_warn.log", director), warnPriority))
-		cores = append(cores, getEncoderCore(logInConsole, prefix, format, encodeLevel, stacktraceKey, fmt.Sprintf("%s/server_error.log", director), errorPriority))
+		cores = append(cores, getEncoderCore(config.LogInConsole, config.Prefix, config.Format, config.EncodeLevel, config.StacktraceKey, fmt.Sprintf("%s/server_info.log", config.Director), infoPriority))
+		cores = append(cores, getEncoderCore(config.LogInConsole, config.Prefix, config.Format, config.EncodeLevel, config.StacktraceKey, fmt.Sprintf("%s/server_warn.log", config.Director), warnPriority))
+		cores = append(cores, getEncoderCore(config.LogInConsole, config.Prefix, config.Format, config.EncodeLevel, config.StacktraceKey, fmt.Sprintf("%s/server_error.log", config.Director), errorPriority))
 	case "warn":
-		cores = append(cores, getEncoderCore(logInConsole, prefix, format, encodeLevel, stacktraceKey, fmt.Sprintf("%s/server_warn.log", director), warnPriority))
-		cores = append(cores, getEncoderCore(logInConsole, prefix, format, encodeLevel, stacktraceKey, fmt.Sprintf("%s/server_error.log", director), errorPriority))
+		cores = append(cores, getEncoderCore(config.LogInConsole, config.Prefix, config.Format, config.EncodeLevel, config.StacktraceKey, fmt.Sprintf("%s/server_warn.log", config.Director), warnPriority))
+		cores = append(cores, getEncoderCore(config.LogInConsole, config.Prefix, config.Format, config.EncodeLevel, config.StacktraceKey, fmt.Sprintf("%s/server_error.log", config.Director), errorPriority))
 	case "error":
-		cores = append(cores, getEncoderCore(logInConsole, prefix, format, encodeLevel, stacktraceKey, fmt.Sprintf("%s/server_error.log", director), errorPriority))
+		cores = append(cores, getEncoderCore(config.LogInConsole, config.Prefix, config.Format, config.EncodeLevel, config.StacktraceKey, fmt.Sprintf("%s/server_error.log", config.Director), errorPriority))
 	default:
-		cores = append(cores, getEncoderCore(logInConsole, prefix, format, encodeLevel, stacktraceKey, fmt.Sprintf("%s/server_debug.log", director), debugPriority))
-		cores = append(cores, getEncoderCore(logInConsole, prefix, format, encodeLevel, stacktraceKey, fmt.Sprintf("%s/server_info.log", director), infoPriority))
-		cores = append(cores, getEncoderCore(logInConsole, prefix, format, encodeLevel, stacktraceKey, fmt.Sprintf("%s/server_warn.log", director), warnPriority))
-		cores = append(cores, getEncoderCore(logInConsole, prefix, format, encodeLevel, stacktraceKey, fmt.Sprintf("%s/server_error.log", director), errorPriority))
+		cores = append(cores, getEncoderCore(config.LogInConsole, config.Prefix, config.Format, config.EncodeLevel, config.StacktraceKey, fmt.Sprintf("%s/server_debug.log", config.Director), debugPriority))
+		cores = append(cores, getEncoderCore(config.LogInConsole, config.Prefix, config.Format, config.EncodeLevel, config.StacktraceKey, fmt.Sprintf("%s/server_info.log", config.Director), infoPriority))
+		cores = append(cores, getEncoderCore(config.LogInConsole, config.Prefix, config.Format, config.EncodeLevel, config.StacktraceKey, fmt.Sprintf("%s/server_warn.log", config.Director), warnPriority))
+		cores = append(cores, getEncoderCore(config.LogInConsole, config.Prefix, config.Format, config.EncodeLevel, config.StacktraceKey, fmt.Sprintf("%s/server_error.log", config.Director), errorPriority))
 	}
 	logger = zap.New(zapcore.NewTee(cores[:]...), zap.AddCaller())
 
-	if showLine {
+	if config.ShowLine {
 		logger = logger.WithOptions(zap.AddCaller())
 	}
 	_defaultLogger = logger

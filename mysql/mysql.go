@@ -4,7 +4,7 @@ package mysql
 import (
 	"database/sql"
 	"fmt"
-	"gitlab.dian.org.cn/helper/miniapp-platform/logger"
+	"github.com/chenxuan520/goweb-platform/logger"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 )
